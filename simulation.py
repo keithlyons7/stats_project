@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import plotly.express as px
 
 
 team_data = pd.read_csv("premStats24_25.csv")
@@ -13,7 +12,7 @@ team_data["Offensive Strength"] = team_data["Goals Scored"] / team_data["Games P
 team_data["Defensive Strength"] = team_data["Goals Conceded"] / team_data["Games Played"]
 
 
-team_data["Adjusted Possession"] = (team_data["Possession (%)"] * team_data["Passing Accuracy (%)"]) / 100
+team_data["Adjusted Possession"] = (team_data["Possession (%)"] * team_data["Accurate Passes per Match"]) / 100
 
 
 team_data["Discipline Risk"] = (team_data["Yellow Cards"] / team_data["Games Played"]) + \
@@ -26,11 +25,14 @@ def simulate_match(home_stats, away_stats):
     home_lambda *= home_stats["Adjusted Possession"] / 100
     away_lambda *= away_stats["Adjusted Possession"] / 100
     
-    home_lambda *= (home_stats["Shots on Target"] / home_stats["xG"])
-    away_lambda *= (away_stats["Shots on Target"] / away_stats["xG"])
+    home_lambda *= (home_stats["Shots on Target per Match"] / home_stats["xG"])
+    away_lambda *= (away_stats["Shots on Target per Match"] / away_stats["xG"])
     
     home_discipline_factor = 1 - home_stats["Discipline Risk"]
     away_discipline_factor = 1 - away_stats["Discipline Risk"]
+
+    home_lambda = max(home_lambda * home_discipline_factor, 0)
+    away_lambda = max(away_lambda * away_discipline_factor, 0)
     
     home_goals = np.random.poisson(home_lambda * home_discipline_factor)
     away_goals = np.random.poisson(away_lambda * away_discipline_factor)
@@ -102,7 +104,3 @@ average_standings = average_standings.sort_values(
 
 average_standings.insert(0, "Position", range(1, len(average_standings) + 1))
 average_standings.to_csv("average_premier_league_standings.csv", index=False)
-
-fig_final_points = px.bar(average_standings, x="Teams", y="Points", 
-                          title="Average Points Across Simulations")
-fig_final_points.show()
